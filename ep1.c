@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
+#define ZERO 0.00000000001
 
 
 void decimal_p_n(double dec, int base){
@@ -45,6 +46,109 @@ void decimal_p_n(double dec, int base){
     free(bits);
 }
 
+void printa_matriz(int tam, double matriz[tam][tam+1]){
+    int i=0, j=0;
+    for(i=0;i<tam;i++){
+        for(j=0;j<tam+1;j++){
+            printf("%.4f ",matriz[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+int eh_diagonal(int tam, double matriz[tam][tam+1]){
+    int i,j;
+    for(i=0;i<tam;i++){
+        for(j=0;j<tam;j++){
+            if(matriz[i][j]!=0 && i!=j){
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+void jordan(int tam, double matriz[tam][tam+1]){
+    int i=0, j=0, k=0, pivo, aux, ordem[tam]; //ordem é um vetor para rastrear as variáveis Xi, caso haja troca de colunas
+    double mults[tam]; //multiplicadores de cada linha
+    double x[tam]; //os X's do sl
+    //inicializando as variáveis
+    for(i=0; i<tam; i++){
+        ordem[i]=i;
+        x[i]=0;
+    }
+    //pivotando a matriz
+    for(i=0;i<tam;i++){
+        pivo=matriz[i][i];
+        if(pivo==0.0){
+            j=i+1;
+            while(j<tam && matriz[i][j]==0.0){
+                j++;
+            }
+            if(j<tam){
+                for(k=0;k<tam;k++){
+                    aux = matriz[k][i];
+                    matriz[k][i] = matriz[k][j];
+                    matriz[k][j] = aux;
+                    ordem[i]=j;
+                    ordem[j]=i;
+                    pivo=matriz[i][i];
+                }
+            }
+            else{
+                for(k=0;k<tam;k++){
+                    x[i]=0;
+                    matriz[k][i]=0;
+                }
+            }
+        }
+        if(pivo!=0.0){
+            for(j=0;j<tam;j++){
+                if(j!=i){
+                    mults[j]=-1*(matriz[j][i]/pivo);
+                    for(k=0;k<tam+1;k++){
+                        matriz[j][k] += ( matriz[i][k] * mults[j] );
+                        if(fabs(matriz[j][k])<=ZERO){
+                            matriz[j][k]=0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    //análise de soluções
+    i=tam-1;
+    while(i>=0){
+        if(matriz[i][i]==0 && matriz[i][tam]!=0){
+            printf("\nSistema incompativel");
+            break;
+        }
+        else if(matriz[i][i]==0 && matriz[i][tam]==0){
+            x[ ordem[i] ]=0;
+        }
+        else{
+            x[ ordem[i] ] = matriz[i][tam];
+            for(j=0;j<tam;j++){
+                if(j!=i){
+                    x[ ordem[i] ]-=(matriz[i][j] * x[ordem[j]]);
+                }
+            }
+            x[ ordem[i] ] /= matriz[i][i];
+        }
+        printf("X%d = %f\n",ordem[i], x[ordem[i]] );
+        i--;
+    }
+    if(eh_diagonal(tam, matriz)){
+        printf("\nMatriz diagonal\n");
+    }
+    else{
+        printf("\n Matriz nao diagonal\n");
+    }
+    printf("\n--------------------------------\n");
+    printa_matriz(tam,matriz);
+    printf("\n---------------------------------\n\n");
+}
+
 int ler_matriz(){
     FILE *arq;
     arq = fopen("sl.txt","r");
@@ -65,7 +169,7 @@ int ler_matriz(){
         }
         cont=0;
         int tam = atoi(num);
-        int matriz[tam][tam+1];
+        double matriz[tam][tam+1];
         strcpy(num," ");
         while(1){
             aux=fgetc(arq);
@@ -73,14 +177,14 @@ int ler_matriz(){
                 mult=-1;
             }
             else if(aux==' '){
-                matriz[i][j]=atoi(num)*mult;
+                matriz[i][j]=atof(num)*mult;
                 strcpy(num," ");
                 mult=1;
                 cont=0;
                 j++;
             }
             else if(aux=='\n'){
-                matriz[i][j]=atoi(num)*mult;
+                matriz[i][j]=atof(num)*mult;
                 printf("\n");
                 strcpy(num," ");
                 mult=1;
@@ -89,7 +193,7 @@ int ler_matriz(){
                 j=0;
             }
             else if(aux==EOF){
-                matriz[i][j]=atoi(num)*mult;
+                matriz[i][j]=atof(num)*mult;
                 break;
             }
             else{
@@ -97,6 +201,7 @@ int ler_matriz(){
                 cont++;
             }
         }
+        jordan(tam,matriz);
     }
     fclose(arq);
 }
@@ -117,7 +222,7 @@ void menu(){
         switch(op){
             case 'C':
                 system("cls");
-                printf("Digite um numero: ");
+                printf("Digite um numero decimal: ");
                 scanf("%f",&bin);
                 setbuf(stdin, NULL);
                 printf("Binario: ");
@@ -131,6 +236,7 @@ void menu(){
                 printf("\n");
             break;
             case 'S':
+                system("cls");
                 ler_matriz();
             break;
             case 'F':
